@@ -1,0 +1,59 @@
+# The data is organized in such a way that the tuning functions of different subjects are measured at different clusters. 
+# Within a given cluster, data from different subjects is treated as repetitions and each subject's tuning curve has 8 different points.
+# The cluster level hyper-parameters thus forms the prior for individual tuning curves. 
+# In sum this fits a mixed effect model on each subject's tuning curve with cluster level hyper-parameters. 
+# Here variance are modelled as in Gelman 2006 with half-cauchy distributions with 25 scale parameter. See *_dgamma models variances as 
+# indicated in BUGS and kruschke.
+
+
+
+model {
+	#single points on the tuning curve.
+	for (n in 1:tpoint) {
+			#there are as many amp, sd's as the number of profiles (tuning .
+			#there are as many tau_noise as the number of clusters.
+			y[n]  ~ dnorm( mu[n] , clusterTAUNOISE[ n2cluster[n]] )
+			# Gaussian model with zero mean. The constant at the end takes care that the curve has zero mean. 
+			# This is useful in cases where the SD parameter is very large. If this constant was not there only 
+			# the tip of a very wide Gaussian would be visible, which is very similar to a line with soft curvature. 
+			# The constant at the end ensures that the peak of the Gaussian with large SD falls below the baseline, 
+			# approximating the area of the full Gaussian curve, not only its visible segment.
+			mu[n] <- amp[n2profile[n]] * exp( - (x[n] / sd[n2profile[n]])^2 /2 ) - amp[n2profile[n]]*pow( 2 * 3.14 * sd[n2profile[n]]^2 , 0.5) /0.7853/8;
+	}
+	#single tuning profiles
+	for (np in 1:tprofile) {	
+		# each profile inherits the mean AMP from its cluster, which is estimated also.		
+		amp[np] ~ dnorm( clusterAMPMU[profile2cluster[np]] , clusterAMPTAU[profile2cluster[np]] )
+		#SD is log-normal distributed as it cannot take negative values.
+		sd[np] ~ dlnorm( clusterSDMU[profile2cluster[np]] , clusterSDTAU[profile2cluster[np]] )		
+	}
+	#single clusters		
+	for (nc in 1:tcluster) {		
+		#
+		# clusterTAUNOISE[nc] ~  dgamma(0.01,0.01)
+		#
+		# Half-cauchy as in Gelman 2006 (http://www.stat.columbia.edu/~gelman/research/published/taumain.pdf)
+  	# Scale parameter is 5, so precision of z = 1/5^2 = 0.04  	
+  	tau_noise_z[nc] ~ dnorm(0, .0016)I(0,)
+  	tau_noise_chSq[nc] ~ dgamma(0.5, 0.5)
+  	tau_noise_sigma[nc] <- tau_noise_z[nc]/sqrt(tau_noise_chSq[nc]) # prior for sigma; cauchy = normal/sqrt(chi^2)
+  	clusterTAUNOISE[nc] <- pow(tau_noise_sigma[nc],-2)		
+		#
+		clusterAMPMU[nc] ~ dnorm(0,1./10000)
+		# BrainAMPMu[nc]   ~ dunif(-5 , 5);
+		# BrainAMPTAU[nc]  ~ dgamma(0.001,0.001)#this means that the BRAINAMPTAU is very small, which in turn means that the distriubtion of clusterAMPMU is very very wide.
+		
+		# clusterAMPTAU[nc] ~ ~ dgamma(0.01,0.01) 
+		amptau_z[nc] ~ dnorm(0, .0016)I(0,)
+  	amptau_chSq[nc] ~ dgamma(0.5, 0.5)
+  	amptau_sigma[nc] <- amptau_z[nc]/sqrt(amptau_chSq[nc]) # prior for sigma; cauchy = normal/sqrt(chi^2)
+  	clusterAMPTAU[nc] <- pow(amptau_sigma[nc],-2)
+				
+		clusterSDMU[nc] ~ dunif(-5 , 5);
+		clusterSDTAU[nc] ~ dgamma(0.01 , 0.01)I(0.0001,10000);
+
+	}				
+}
+
+
+		

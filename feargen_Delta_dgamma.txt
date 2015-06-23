@@ -1,0 +1,27 @@
+# see feargen_Gaussian.txt for more details. This fits a simple zero-mean Delta function with amplitude parameter.
+model {
+	for (n in 1:tpoint) {			
+			y[n]  ~ dnorm( mu[n] , clusterTAUNOISE[ n2cluster[n]] )
+			mu[n] <- amp[n2profile[n]] * x[n] - amp[n2profile[n]]/8
+			#Xs must be all zero except the CS+ face.
+	}
+
+	for (np in 1:tprofile) {			
+		amp[np] ~ dnorm( clusterAMPMU[profile2cluster[np]] , clusterAMPTAU[profile2cluster[np]] );
+	}
+			
+	for (nc in 1:tcluster) {		
+		#
+		clusterTAUNOISE[nc] ~  dgamma(0.01,0.01)
+		#
+		clusterAMPMU[nc] ~ dnorm(0,1/10000)
+		# BrainAMPMu[nc]   ~ dunif(-5 , 5);
+		# BrainAMPTAU[nc]  ~ dgamma(0.001,0.001) 
+		
+		clusterAMPTAU[nc] ~ dgamma(0.01,0.01)	
+				
+	}				
+}
+
+
+		

@@ -1,0 +1,71 @@
+#
+# Here the aim is to explain tuning-function in Y (e.g. vmpfc) as combination of w1*aIC and w2*ITC: Y ~ W1*A + W1*B + noise. 
+# W1 is hierarchically modelled both at the subject and cluster level. Essentially it is a linear regression with two predictor variables.
+#
+# See feargen_Gaussian.txt for further details.
+
+
+model {
+
+	#single points on the tuning curve.
+	for (n in 1:tpoint) {
+			# Point-wise multiplication of tuning-profiles. Each subject has its own weight.
+			mu[n] 	 <- sub_w1[n2sub[n]]*x1[n] + sub_w2[n2sub[n]]*x2[n];
+			# the target tuning is normally distributed around the integrated value
+			y[n]  	 ~ dnorm( mu[n] , taunoise );
+	}
+
+	#single subjects
+	for (ns in 1:tsubject) {
+
+		#subject's weights are normally distributed.
+		sub_w1[ns]    ~ dnorm(  sub_w1_mu[ns] , sub_w1_tau[ns]);
+		#each parameter value is distributed according to population weight.
+		sub_w1_mu[ns] ~ dnorm(  group_w1_mu   , group_w1_tau);		
+
+		sub_w1_tau_z[ns]      ~ dnorm(0, .0016)I(0,)
+  		sub_w1_tau_chSq[ns]   ~ dgamma(0.5, 0.5)
+  		sub_w1_tau_sigma[ns] <- sub_w1_tau_z[ns]/sqrt(sub_w1_tau_chSq[ns]) # prior for sigma; cauchy = normal/sqrt(chi^2)  		
+		sub_w1_tau[ns]	     <- pow(sub_w1_tau_sigma[ns],-2);
+
+		#
+		#same thing for the second cluster
+		sub_w2[ns]    		  ~ dnorm( sub_w2_mu[ns] , sub_w2_tau[ns]);		
+		sub_w2_mu[ns] 		  ~ dnorm(group_w2_mu , group_w2_tau);
+		sub_w2_tau_z[ns]      ~ dnorm(0, .0016)I(0,);
+  		sub_w2_tau_chSq[ns]   ~ dgamma(0.5, 0.5);
+  		sub_w2_tau_sigma[ns] <- sub_w2_tau_z[ns]/sqrt(sub_w2_tau_chSq[ns]) # prior for sigma; cauchy = normal/sqrt(chi^2);
+		sub_w2_tau[ns]	     <- pow(sub_w2_tau_sigma[ns],-2);
+
+	}
+############ W1
+# prior of group average	
+	group_w1_mu 		  ~ dnorm(0,0.001);
+	# prior of sigma; cauchy  = normal/sqrt(chi^2);
+	group_w1_amptau_z     ~ dnorm(0, .0016)I(0,);
+	group_w1_amptau_chSq  ~ dgamma(0.5, 0.5);
+  	group_w1_amptau_sigma <- group_w1_amptau_z/sqrt(group_w1_amptau_chSq);
+  	group_w1_tau  		  <- pow(group_w1_amptau_sigma,-2);
+
+
+############ W2
+# prior of group average	
+	group_w2_mu 		  ~ dnorm(0,0.001);
+# prior of sigma; cauchy  = normal/sqrt(chi^2);
+	group_w2_amptau_z     ~ dnorm(0, .0016)I(0,);
+	group_w2_amptau_chSq  ~ dgamma(0.5, 0.5);
+  	group_w2_amptau_sigma <- group_w2_amptau_z/sqrt(group_w2_amptau_chSq);
+  	group_w2_tau  		  <- pow(group_w2_amptau_sigma,-2);
+
+
+############ NOISE VARIANCE
+# prior of noise variance
+	tau_noise_z  	 	 ~  dnorm(0, .0016)I(0,);
+  	tau_noise_chSq	     ~  dgamma(0.5, 0.5);
+  	tau_noise_sigma      <- tau_noise_z/sqrt(tau_noise_chSq);
+  	taunoise 	 		 <- pow(tau_noise_sigma,-2);
+
+}
+
+
+		

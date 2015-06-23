@@ -1,0 +1,49 @@
+# see feargen_Gaussian.txt for more details. This fits a simple zero-mean Delta function with amplitude parameter.
+model {
+	for (n in 1:tpoint) {			
+			y[n]  ~ dnorm( mu[n] , clusterTAUNOISE[ n2cluster[n]] )
+			mu[n] <- amp[n2profile[n]] * x[n] + baseline[n2profile[n]]
+			#Xs must be all zero except the CS+ face.
+	}
+
+	for (np in 1:tprofile) {			
+		amp[np] ~ dnorm( clusterAMPMU[profile2cluster[np]] , clusterAMPTAU[profile2cluster[np]] );
+		baseline[np] ~ dnorm( clusterBASELINEMU[profile2cluster[np]] , clusterBASELINETAU[profile2cluster[np]] );
+	}
+			
+	for (nc in 1:tcluster) {		
+		#
+		# clusterTAUNOISE[nc] ~  dgamma(0.01,0.01)
+				# Half-cauchy as in Gelman 2006 (http://www.stat.columbia.edu/~gelman/research/published/taumain.pdf)
+  	# Scale parameter is 5, so precision of z = 1/5^2 = 0.04  	
+  	tau_noise_z[nc] ~ dnorm(0, .0016)I(0,)
+  	tau_noise_chSq[nc] ~ dgamma(0.5, 0.5)
+  	tau_noise_sigma[nc] <- tau_noise_z[nc]/sqrt(tau_noise_chSq[nc]) # prior for sigma; cauchy = normal/sqrt(chi^2)
+  	clusterTAUNOISE[nc] <- pow(tau_noise_sigma[nc],-2)		
+		#
+		clusterAMPMU[nc] ~ dnorm(0,1/10000)
+		# BrainAMPMu[nc]   ~ dunif(-5 , 5);
+		# BrainAMPTAU[nc]  ~ dgamma(0.001,0.001) 
+		
+		# clusterAMPTAU[nc] ~ dgamma(0.01,0.01)
+		# amptau_z[nc] ~ dnorm(0, .0016)I(0,)
+  # 	amptau_chSq[nc] ~ dgamma(0.5, 0.5)
+  # 	amptau_sigma[nc] <- amptau_z[nc]/sqrt(amptau_chSq[nc]) 
+  # 	clusterAMPTAU[nc] <- pow(amptau_sigma[nc],-2)
+  	clusterAMPTAU[nc] ~ dgamma(0.01,0.01)
+		#
+		clusterBASELINEMU[nc] ~ dnorm(0,1/10000)
+		# BrainAMPMu[nc]   ~ dunif(-5 , 5);
+		# BrainAMPTAU[nc]  ~ dgamma(0.001,0.001) 
+		
+		# clusterAMPTAU[nc] ~ dgamma(0.01,0.01)
+		# BASELINEtau_z[nc] ~ dnorm(0, .0016)I(0,)
+  # 	BASELINEtau_chSq[nc] ~ dgamma(0.5, 0.5)
+  # 	BASELINEtau_sigma[nc] <- BASELINEtau_z[nc]/sqrt(BASELINEtau_chSq[nc]) 
+  # 	clusterBASELINETAU[nc] <- pow(BASELINEtau_sigma[nc],-2)		
+  	clusterBASELINETAU[nc] ~ dgamma(0.01,0.01)
+	}				
+}
+
+
+		

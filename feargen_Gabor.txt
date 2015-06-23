@@ -1,0 +1,57 @@
+# Fits a model for each cluster and subject individually. Subjects from different clusters 
+# are treated as different subjects. This will give me the chance to compute correlations
+# between subjects, to see whether deviations from the baseline tuning is shared across 
+# different clusters i.e. subjects who are tuned sharper in cluster C, are they also tuned 
+# sharper in other clusters.
+#
+# 
+model {
+	for (n in 1:tpoint) {
+			#there are as many amp, sd's as the number of profiles.
+			#there are as many tau_noise as the number of clusters.
+			y[n]  ~ dnorm( mu[n] , clusterTAUNOISE[ n2cluster[n]] )
+			mu[n] <- amp[n2profile[n]] * exp( - ( (x[n]) / sd[n2profile[n]])^2 /2 ) * cos((x[n])*freq[n2profile[n]]) + constant[n2profile[n]]
+			#x's need to be subtracted by pi so that CS- is the center
+}
+
+
+	for (np in 1:tprofile) {	
+		# each profile inherits the mean AMP from its cluster, which is estimated also.
+		# However the SD is left untouched.
+		freq[np] ~ dlnorm( clusterFreqMU[profile2cluster[np]] , clusterFreqTAU[profile2cluster[np]] );
+		constant[np] ~ dnorm( clusterConstantMU[profile2cluster[np]] , clusterConstantTAU[profile2cluster[np]] );
+		amp[np] ~ dnorm( clusterAMPMU[profile2cluster[np]] , clusterAMPTAU[profile2cluster[np]] );
+		#
+		sd[np] ~ dlnorm( clusterSDMU[profile2cluster[np]] , clusterSDTAU[profile2cluster[np]] )		
+	}
+			
+	for (nc in 1:tcluster) {		
+		#
+		clusterTAUNOISE[nc] ~  dgamma(0.01,0.01)
+		#
+		clusterAMPMU[nc]  ~ dnorm(BrainAMPMu[nc],BrainAMPTAU[nc])
+		BrainAMPMu[nc]    ~ dunif(-5 , 5);
+		BrainAMPTAU[nc]   ~ dgamma(0.001,0.001) 		
+		clusterAMPTAU[nc] ~ dunif(0,10) #~ dgamma(0.001,0.001) 
+
+		# clusterConstantMU[nc]  ~ dunif(-5 , 5);
+		clusterConstantMU[nc]  ~ dnorm(BrainConstantMu[nc],BrainConstantTAU[nc])
+		BrainConstantMu[nc]    ~ dunif(-5 , 5);
+		BrainConstantTAU[nc]   ~ dgamma(0.001,0.001) 
+		clusterConstantTAU[nc] ~ dgamma(0.001,0.001) 
+		
+		clusterFreqMU[nc]  ~ dunif(0, 1);
+		# BrainFreqMu[nc]    ~ dunif(.5 , 5);
+		# BrainFreqTAU[nc]   ~ dgamma(0.001,0.001) 
+		clusterFreqTAU[nc] ~ dgamma(0.01 , 0.016)I(0.0001,10000);		
+		#BrainSDMu[nc] ~ dunif(0, 5);
+		#BrainSDTAU[nc] ~ dgamma(.5, .5);
+						
+		clusterSDMU[nc]  ~ dunif(0,2);
+		clusterSDTAU[nc] ~ dgamma(0.01 , 0.02)I(0.0001,10000);		
+	
+	}				
+}
+
+
+		
